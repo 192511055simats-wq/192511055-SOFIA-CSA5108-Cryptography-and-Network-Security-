@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DES — Data Encryption Standard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0B1220;
+    --panel: #121B2E;
+    --panel-2: #16223A;
+    --line: #223050;
+    --teal: #3FC1B0;
+    --teal-dim: #2A8E82;
+    --amber: #F2A65A;
+    --amber-dim: #C77F3B;
+    --text: #E7EEF5;
+    --muted: #8CA0B5;
+    --red: #E5687A;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; overflow-x:hidden;}
+  body{background-image:
+      radial-gradient(circle at 15% 8%, rgba(63,193,176,0.08), transparent 40%),
+      radial-gradient(circle at 85% 30%, rgba(242,166,90,0.06), transparent 40%);
+  }
+  .wrap{max-width:1080px; margin:0 auto; padding:0 28px 80px;}
+  code, .mono{font-family:'IBM Plex Mono', monospace;}
+  h1,h2,h3{font-family:'Space Grotesk', sans-serif;}
+
+  /* ---- HERO ---- */
+  .hero{
+    position:relative;
+    padding:74px 28px 60px;
+    border-bottom:1px solid var(--line);
+    background:
+      linear-gradient(180deg, rgba(63,193,176,0.05), transparent 60%);
+    overflow:hidden;
+  }
+  .hero-inner{max-width:1080px; margin:0 auto; position:relative; z-index:2;}
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:'IBM Plex Mono', monospace; font-size:12.5px; letter-spacing:0.14em;
+    color:var(--teal); text-transform:uppercase; border:1px solid var(--teal-dim);
+    padding:6px 12px; border-radius:100px; background:rgba(63,193,176,0.06);
+  }
+  .eyebrow .dot{width:6px; height:6px; border-radius:50%; background:var(--teal); box-shadow:0 0 8px var(--teal);}
+  .hero h1{
+    font-size:clamp(38px, 6vw, 64px); line-height:1.02; margin-top:22px; font-weight:700;
+    background:linear-gradient(180deg, #FFFFFF, #B9CCDD);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .hero .sub{margin-top:16px; max-width:640px; color:var(--muted); font-size:16.5px; line-height:1.6;}
+  .hero-stats{display:flex; gap:0; margin-top:38px; border:1px solid var(--line); border-radius:14px; overflow:hidden; background:var(--panel);}
+  .hero-stat{flex:1; padding:18px 20px; border-right:1px solid var(--line);}
+  .hero-stat:last-child{border-right:none;}
+  .hero-stat .num{font-family:'IBM Plex Mono'; font-size:26px; color:var(--teal); font-weight:600;}
+  .hero-stat .lbl{font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-top:4px;}
+
+  /* binary rain backdrop */
+  .bits{position:absolute; inset:0; z-index:1; opacity:0.12; font-family:'IBM Plex Mono'; font-size:13px; color:var(--teal); line-height:1.4; user-select:none; pointer-events:none; white-space:pre; overflow:hidden;}
+
+  /* ---- SECTION SHELL ---- */
+  section.block{padding:56px 0 8px; border-bottom:1px solid var(--line);}
+  .kicker{
+    display:flex; align-items:center; gap:12px; margin-bottom:22px;
+  }
+  .kicker .num{
+    font-family:'IBM Plex Mono'; font-size:13px; color:var(--bg); background:var(--teal);
+    width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:600; flex:none;
+  }
+  .kicker h2{font-size:24px; font-weight:600; color:var(--text);}
+  .kicker .rule{flex:1; height:1px; background:var(--line);}
+
+  p.lead{color:var(--muted); font-size:15px; line-height:1.7; max-width:760px; margin-bottom:22px;}
+
+  /* ---- HISTORY TIMELINE ---- */
+  .timeline{display:grid; grid-template-columns:repeat(4,1fr); gap:14px;}
+  .tl-card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px 16px; position:relative;}
+  .tl-card::before{content:""; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg, var(--teal), var(--amber)); border-radius:12px 12px 0 0;}
+  .tl-year{font-family:'IBM Plex Mono'; color:var(--amber); font-size:20px; font-weight:600;}
+  .tl-title{font-size:13.5px; font-weight:600; margin-top:6px; color:var(--text);}
+  .tl-desc{font-size:12.5px; color:var(--muted); margin-top:6px; line-height:1.5;}
+
+  /* ---- ARCHITECTURE / FEISTEL ---- */
+  .arch-grid{display:grid; grid-template-columns:1.1fr 0.9fr; gap:28px; align-items:start;}
+  .arch-text ul{list-style:none; margin-top:6px;}
+  .arch-text li{
+    display:flex; gap:10px; font-size:14px; color:var(--muted); padding:10px 0; border-bottom:1px dashed var(--line);
+  }
+  .arch-text li b{color:var(--text); font-weight:600;}
+  .arch-text li .ico{flex:none; width:20px; text-align:center; color:var(--teal);}
+  .diagram-card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px;}
+  .diagram-card .cap{font-size:11.5px; color:var(--muted); text-align:center; margin-top:10px; font-family:'IBM Plex Mono';}
+
+  /* ---- STAT PANELS (block/key size) ---- */
+  .stat-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  .stat-card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:22px; text-align:center;}
+  .stat-card .icon{font-size:26px;}
+  .stat-card .big{font-family:'IBM Plex Mono'; font-size:30px; color:var(--teal); font-weight:600; margin-top:8px;}
+  .stat-card .cap-lbl{font-size:12.5px; color:var(--muted); margin-top:6px; text-transform:uppercase; letter-spacing:0.05em;}
+  .stat-card .fine{font-size:12px; color:var(--muted); margin-top:10px; line-height:1.5;}
+
+  /* ---- 16 ROUND FLOW ---- */
+  .flow-shell{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:26px;}
+  .flow-top-row{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:18px;}
+  .flow-chip{
+    border:1px solid var(--line); background:var(--panel-2); border-radius:10px; padding:12px; text-align:center;
+    font-family:'IBM Plex Mono'; font-size:12.5px; color:var(--text);
+  }
+  .flow-chip small{display:block; color:var(--muted); font-size:10.5px; margin-top:4px; font-family:'Inter';}
+  .round-track{display:flex; align-items:center; gap:6px; overflow-x:auto; padding:14px 4px 6px;}
+  .round-node{
+    flex:none; width:50px; height:50px; border-radius:10px; border:1.5px solid var(--teal-dim);
+    display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono'; font-size:13px; color:var(--teal);
+    background:rgba(63,193,176,0.06); position:relative;
+  }
+  .round-node.final{border-color:var(--amber-dim); color:var(--amber); background:rgba(242,166,90,0.08);}
+  .round-arrow{color:var(--line); flex:none; font-size:14px;}
+  .round-legend{display:flex; gap:22px; margin-top:16px; flex-wrap:wrap;}
+  .round-legend .li{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted);}
+  .swatch{width:12px; height:12px; border-radius:4px; flex:none;}
+
+  /* Feistel single round diagram */
+  .feistel-cap{text-align:center; font-size:12px; color:var(--muted); margin-top:14px; font-family:'IBM Plex Mono';}
+
+  /* ---- ADV / LIM two column ---- */
+  .two-col{display:grid; grid-template-columns:1fr 1fr; gap:18px;}
+  .col-card{border-radius:14px; padding:22px; border:1px solid var(--line);}
+  .col-card.good{background:linear-gradient(180deg, rgba(63,193,176,0.07), transparent 40%), var(--panel);}
+  .col-card.bad{background:linear-gradient(180deg, rgba(229,104,122,0.07), transparent 40%), var(--panel);}
+  .col-card h3{font-size:15.5px; display:flex; align-items:center; gap:8px; margin-bottom:14px;}
+  .col-card ul{list-style:none;}
+  .col-card li{font-size:13.5px; color:var(--muted); padding:9px 0 9px 22px; position:relative; border-bottom:1px dashed var(--line); line-height:1.5;}
+  .col-card li:last-child{border-bottom:none;}
+  .col-card.good li::before{content:"+"; position:absolute; left:0; color:var(--teal); font-weight:700; font-family:'IBM Plex Mono';}
+  .col-card.bad li::before{content:"–"; position:absolute; left:0; color:var(--red); font-weight:700; font-family:'IBM Plex Mono';}
+
+  /* ---- APPLICATIONS ---- */
+  .app-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:14px;}
+  .app-card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:20px 14px; text-align:center;}
+  .app-card .icon{font-size:26px;}
+  .app-card .name{font-size:13px; font-weight:600; margin-top:10px;}
+  .app-card .desc{font-size:11.5px; color:var(--muted); margin-top:6px; line-height:1.5;}
+
+  footer{padding:30px 0 10px; text-align:center; color:var(--muted); font-size:11.5px; font-family:'IBM Plex Mono';}
+
+  @media (max-width:760px){
+    .timeline{grid-template-columns:repeat(2,1fr);}
+    .arch-grid{grid-template-columns:1fr;}
+    .stat-grid{grid-template-columns:1fr;}
+    .two-col{grid-template-columns:1fr;}
+    .app-grid{grid-template-columns:repeat(2,1fr);}
+    .flow-top-row{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="bits" id="bits"></div>
+  <div class="hero-inner">
+    <span class="eyebrow"><span class="dot"></span>SYMMETRIC-KEY BLOCK CIPHER · 1975–1977</span>
+    <h1>Data Encryption<br>Standard (DES)</h1>
+    <p class="sub">A 64-bit Feistel-network cipher that defined commercial cryptography for two decades — and taught the world why key length matters.</p>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="num">64-bit</div><div class="lbl">Block Size</div></div>
+      <div class="hero-stat"><div class="num">56-bit</div><div class="lbl">Effective Key</div></div>
+      <div class="hero-stat"><div class="num">16</div><div class="lbl">Feistel Rounds</div></div>
+      <div class="hero-stat"><div class="num">1977</div><div class="lbl">FIPS 46 Adopted</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- HISTORY -->
+  <section class="block">
+    <div class="kicker"><div class="num">01</div><h2>History &amp; Purpose</h2><div class="rule"></div></div>
+    <p class="lead">DES began as a corporate cipher and ended as a national standard — its story is also the story of NIST, IBM, and the NSA negotiating what "secure enough" meant for a generation of computing.</p>
+    <div class="timeline">
+      <div class="tl-card">
+        <div class="tl-year">1973</div>
+        <div class="tl-title">NBS Public Call</div>
+        <div class="tl-desc">The National Bureau of Standards requests proposals for a single, public encryption algorithm for U.S. government use.</div>
+      </div>
+      <div class="tl-card">
+        <div class="tl-year">1975</div>
+        <div class="tl-title">Lucifer → DES</div>
+        <div class="tl-desc">IBM submits a refined version of its Lucifer cipher. The NSA shortens the key from 112 to 56 bits before publication.</div>
+      </div>
+      <div class="tl-card">
+        <div class="tl-year">1977</div>
+        <div class="tl-title">FIPS PUB 46</div>
+        <div class="tl-desc">DES is formally adopted as the U.S. Federal Information Processing Standard for encrypting sensitive but unclassified data.</div>
+      </div>
+      <div class="tl-card">
+        <div class="tl-year">1998–2005</div>
+        <div class="tl-title">Broken, then Retired</div>
+        <div class="tl-desc">The EFF's "Deep Crack" brute-forces a DES key in 56 hours. NIST withdraws DES in favor of AES in 2001–2005.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ARCHITECTURE -->
+  <section class="block">
+    <div class="kicker"><div class="num">02</div><h2>Architecture — The Feistel Structure</h2><div class="rule"></div></div>
+    <p class="lead">DES splits each block in half and repeatedly scrambles one side using a function of the other — the same structure decrypts the data simply by running the round keys in reverse.</p>
+    <div class="arch-grid">
+      <div class="arch-text">
+        <ul>
+          <li><span class="ico">◧</span><div><b>Split.</b> The 64-bit block divides into a Left (L) and Right (R) half, 32 bits each.</div></li>
+          <li><span class="ico">⊕</span><div><b>Round function F.</b> The right half is expanded, mixed with a round subkey via XOR, and passed through eight S-boxes for non-linear substitution.</div></li>
+          <li><span class="ico">⇄</span><div><b>Swap.</b> The new right half becomes the next left half, and vice versa — this reversibility is the whole point of a Feistel network.</div></li>
+          <li><span class="ico">🔑</span><div><b>Key schedule.</b> A 56-bit key generates sixteen unique 48-bit round subkeys through rotation and permutation (PC-1 / PC-2).</div></li>
+          <li><span class="ico">↔</span><div><b>Symmetry.</b> Because encryption and decryption share the same structure, DES needs no separate decryption algorithm — just reversed subkey order.</div></li>
+        </ul>
+      </div>
+      <div class="diagram-card">
+        <svg viewBox="0 0 320 380" xmlns="http://www.w3.org/2000/svg">
+          <!-- Li-1, Ri-1 -->
+          <text x="60" y="22" fill="#8CA0B5" font-family="IBM Plex Mono" font-size="12" text-anchor="middle">L(i-1)</text>
+          <text x="260" y="22" fill="#8CA0B5" font-family="IBM Plex Mono" font-size="12" text-anchor="middle">R(i-1)</text>
+          <line x1="60" y1="30" x2="60" y2="80" stroke="#3FC1B0" stroke-width="2"/>
+          <line x1="260" y1="30" x2="260" y2="80" stroke="#F2A65A" stroke-width="2"/>
+          <!-- branch to F -->
+          <line x1="260" y1="80" x2="150" y2="120" stroke="#F2A65A" stroke-width="2"/>
+          <line x1="260" y1="80" x2="260" y2="290" stroke="#F2A65A" stroke-width="2"/>
+
+          <!-- F box -->
+          <rect x="110" y="120" width="80" height="40" rx="8" fill="#16223A" stroke="#3FC1B0" stroke-width="1.5"/>
+          <text x="150" y="145" fill="#3FC1B0" font-family="IBM Plex Mono" font-size="14" text-anchor="middle" font-weight="600">F</text>
+
+          <!-- Ki -->
+          <text x="230" y="105" fill="#F2A65A" font-family="IBM Plex Mono" font-size="11" text-anchor="middle">K(i)</text>
+          <line x1="222" y1="112" x2="188" y2="132" stroke="#F2A65A" stroke-width="1.5" stroke-dasharray="3,3"/>
+
+          <!-- F output down to XOR -->
+          <line x1="150" y1="160" x2="150" y2="205" stroke="#3FC1B0" stroke-width="2"/>
+
+          <!-- XOR circle -->
+          <circle cx="150" cy="220" r="16" fill="#16223A" stroke="#3FC1B0" stroke-width="1.5"/>
+          <text x="150" y="226" fill="#3FC1B0" font-family="IBM Plex Mono" font-size="16" text-anchor="middle">⊕</text>
+
+          <!-- L(i-1) into XOR -->
+          <line x1="60" y1="80" x2="60" y2="220" stroke="#3FC1B0" stroke-width="2"/>
+          <line x1="60" y1="220" x2="134" y2="220" stroke="#3FC1B0" stroke-width="2"/>
+
+          <!-- outputs cross to next round -->
+          <line x1="150" y1="236" x2="150" y2="290" stroke="#3FC1B0" stroke-width="2"/>
+          <line x1="150" y1="290" x2="60" y2="330" stroke="#3FC1B0" stroke-width="2"/>
+          <line x1="260" y1="290" x2="260" y2="330" stroke="#F2A65A" stroke-width="2"/>
+          <line x1="150" y1="290" x2="260" y2="290" stroke="#3FC1B0" stroke-width="0" opacity="0"/>
+
+          <!-- cross swap lines -->
+          <path d="M150,290 L150,300 L260,300 L260,330" fill="none" stroke="#3FC1B0" stroke-width="2"/>
+          <path d="M260,290 L260,300" fill="none" stroke="#F2A65A" stroke-width="0" opacity="0"/>
+
+          <text x="60" y="352" fill="#8CA0B5" font-family="IBM Plex Mono" font-size="12" text-anchor="middle">L(i)</text>
+          <text x="260" y="352" fill="#8CA0B5" font-family="IBM Plex Mono" font-size="12" text-anchor="middle">R(i)</text>
+
+          <circle cx="60" cy="330" r="3" fill="#3FC1B0"/>
+          <circle cx="260" cy="330" r="3" fill="#F2A65A"/>
+        </svg>
+        <div class="cap">ONE FEISTEL ROUND — R(i)=L(i-1)⊕F(R(i-1),K(i)) · L(i)=R(i-1)</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BLOCK / KEY SIZE -->
+  <section class="block">
+    <div class="kicker"><div class="num">03</div><h2>Block Size &amp; Key Size</h2><div class="rule"></div></div>
+    <p class="lead">DES's dimensions were generous for 1975 hardware — and precisely why it became breakable by 1998.</p>
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="icon">🧱</div>
+        <div class="big">64 bits</div>
+        <div class="cap-lbl">Plaintext Block</div>
+        <div class="fine">Data is processed in fixed 64-bit chunks; shorter messages are padded to fill a full block.</div>
+      </div>
+      <div class="stat-card">
+        <div class="icon">🔑</div>
+        <div class="big">56 bits</div>
+        <div class="cap-lbl">Effective Key (of 64)</div>
+        <div class="fine">The key is stored as 64 bits, but 8 bits are parity checks — only 56 bits carry real entropy.</div>
+      </div>
+      <div class="stat-card">
+        <div class="icon">🎯</div>
+        <div class="big">2⁵⁶</div>
+        <div class="cap-lbl">Keyspace</div>
+        <div class="fine">≈72 quadrillion combinations — brute-forceable in under a day on modern hardware.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16 ROUNDS FLOW -->
+  <section class="block">
+    <div class="kicker"><div class="num">04</div><h2>Encryption Process — 16 Rounds</h2><div class="rule"></div></div>
+    <p class="lead">Every DES encryption follows the same pipeline: permute, iterate sixteen Feistel rounds under sixteen distinct subkeys, swap once more, then permute back.</p>
+    <div class="flow-shell">
+      <div class="flow-top-row">
+        <div class="flow-chip">64-bit Plaintext<small>Raw input block</small></div>
+        <div class="flow-chip">Initial Permutation (IP)<small>Bits reordered, no security added</small></div>
+        <div class="flow-chip">Split L₀ / R₀<small>32 bits each</small></div>
+      </div>
+      <div class="round-track" id="roundTrack"></div>
+      <div class="flow-top-row" style="margin-top:18px;">
+        <div class="flow-chip">Final Swap<small>L₁₆, R₁₆ → R₁₆, L₁₆</small></div>
+        <div class="flow-chip">Inverse Permutation (IP⁻¹)<small>Undoes the initial reorder</small></div>
+        <div class="flow-chip">64-bit Ciphertext<small>Encrypted output block</small></div>
+      </div>
+      <div class="round-legend">
+        <div class="li"><span class="swatch" style="background:#3FC1B0;"></span>Rounds 1–15 · standard Feistel round</div>
+        <div class="li"><span class="swatch" style="background:#F2A65A;"></span>Round 16 · omits the final swap</div>
+        <div class="li"><span class="swatch" style="background:#8CA0B5;"></span>Each round uses its own 48-bit subkey Kₙ</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ADVANTAGES / LIMITATIONS -->
+  <section class="block">
+    <div class="kicker"><div class="num">05</div><h2>Advantages &amp; Limitations</h2><div class="rule"></div></div>
+    <div class="two-col">
+      <div class="col-card good">
+        <h3>✅ Advantages</h3>
+        <ul>
+          <li>Simple, well-documented Feistel design — easy to implement in hardware.</li>
+          <li>Fast in silicon; became the basis for dedicated crypto chips in the 1980s–90s.</li>
+          <li>Extensively cryptanalyzed for 40+ years, making its weaknesses (and its S-box design) exceptionally well understood.</li>
+          <li>Its structure directly inspired stronger successors like Triple DES and Blowfish.</li>
+        </ul>
+      </div>
+      <div class="col-card bad">
+        <h3>⚠️ Limitations</h3>
+        <ul>
+          <li>56-bit key is far too short — brute-forceable in hours with modern GPUs/ASICs.</li>
+          <li>64-bit block size is vulnerable to birthday-bound collision attacks on large data volumes.</li>
+          <li>Susceptible to differential and linear cryptanalysis under academic conditions.</li>
+          <li>Officially deprecated by NIST; no longer approved for protecting sensitive government data.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- APPLICATIONS -->
+  <section class="block">
+    <div class="kicker"><div class="num">06</div><h2>Applications</h2><div class="rule"></div></div>
+    <p class="lead">Pure DES is retired, but its legacy — and in some cases its literal implementation — persists in legacy systems.</p>
+    <div class="app-grid">
+      <div class="app-card"><div class="icon">🏧</div><div class="name">Legacy Banking / ATMs</div><div class="desc">PIN block encryption in older financial hardware, often via Triple DES.</div></div>
+      <div class="app-card"><div class="icon">💳</div><div class="name">Triple DES (3DES)</div><div class="desc">DES applied three times with distinct keys to extend effective security.</div></div>
+      <div class="app-card"><div class="icon">📚</div><div class="name">Cryptography Education</div><div class="desc">The reference example for teaching Feistel networks and block cipher design.</div></div>
+      <div class="app-card"><div class="icon">🗄️</div><div class="name">Legacy Systems</div><div class="desc">Older UNIX crypt(), some embedded and industrial protocols not yet migrated.</div></div>
+    </div>
+  </section>
+
+  <footer>DES · FIPS PUB 46 (1977) → Withdrawn by NIST (2005) → Superseded by AES (FIPS 197)</footer>
+</div>
+
+<script>
+  // binary rain backdrop
+  const bitsEl = document.getElementById('bits');
+  let rows = [];
+  for(let r=0;r<14;r++){
+    let row='';
+    for(let c=0;c<90;c++){ row += Math.random()>0.5?'1':'0'; }
+    rows.push(row);
+  }
+  bitsEl.textContent = rows.join('\n');
+
+  // build 16 round nodes
+  const track = document.getElementById('roundTrack');
+  for(let i=1;i<=16;i++){
+    const node = document.createElement('div');
+    node.className = 'round-node' + (i===16 ? ' final' : '');
+    node.textContent = i;
+    track.appendChild(node);
+    if(i<16){
+      const arrow = document.createElement('div');
+      arrow.className = 'round-arrow';
+      arrow.textContent = '→';
+      track.appendChild(arrow);
+    }
+  }
+</script>
+
+</body>
+</html>
